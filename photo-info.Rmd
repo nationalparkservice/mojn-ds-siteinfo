@@ -1,0 +1,7 @@
+
+
+### {{photo.label}}
+
+UTM Zone {{utm.zone}} X: {{utm.x}} Y: {{utm.y}}
+
+![{{photo.notes}}]({{photo.path}}){width=450px}
