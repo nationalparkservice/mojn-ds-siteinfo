@@ -1,0 +1,86 @@
+---
+output:
+  officedown::rdocx_document
+params:
+  site.code: DEVA_P_ANV0292
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(pool)
+library(dbplyr)
+library(officedown)
+
+# Set up database connection
+db.params <- readr::read_csv("M:/MONITORING/DS_Water/Data/Database/ConnectFromR/ds-database-conn.csv") %>%
+      as.list()
+db.params$drv <- odbc::odbc()
+conn <- do.call(dbPool, db.params)
+
+# Get plot info from database
+plot.info <- tbl(conn, in_schema("export", "SiteInfoSheet")) %>%
+  collect() %>%
+  filter(SiteCode == params$site.code)
+
+poolClose(conn)
+
+# Split plot info into visit-level info...
+visit.info <- plot.info %>%
+  select(-PhotoType, -PhotoLabel, -RenamedFilePath, -UtmX_m, -UtmY_m, -UTMZone, -PhotoNotes) %>%
+  unique()
+
+# ...and photo-level info
+photo.info <- plot.info %>%
+  select(PhotoType, PhotoLabel, RenamedFilePath, UtmX_m, UtmY_m, UTMZone, PhotoNotes) %>%
+  mutate(RenamedFilePath = sub("\\\\\\\\INPLAKE52V\\\\ORG", "M:", RenamedFilePath))
+
+photo.types <- c('SOURCE', 'UPSTR', 'DNSTR', 'SENSOR')
+
+photo.info %<>%
+  mutate(PhotoType = factor(PhotoType, levels = photo.types)) %>%
+  arrange(PhotoType)
+```
+
+---
+title: `r visit.info$SiteCode`
+author: `r visit.info$SiteName`
+date: Last visited `r visit.info$VisitDate` (WY `r visit.info$VisitGroup`)
+---
+
+<!---BLOCK_MULTICOL_START--->
+
+#### Spring type
+`r visit.info$SpringType`
+
+#### Sample frame
+`r visit.info$SampleFrame`
+
+<!---CHUNK_COLUMNBREAK--->
+
+#### Visit notes
+`r visit.info$VisitNotes`
+
+#### Sensor notes
+`r visit.info$SensorNotes`
+
+<!---BLOCK_MULTICOL_STOP{widths: [2,2], space: 0.2, sep: true}--->
+
+## Photos
+```{r include=FALSE}
+photo.section <- NULL
+for(row in 1:nrow(photo.info)) {
+  photo <- photo.info[row,]
+  photo.path <- photo$RenamedFilePath
+  photo.type <- photo$PhotoType
+  photo.label <- photo$PhotoLabel
+  utm.x <- photo$UtmX_m
+  utm.y <- photo$UtmY_m
+  utm.zone <- photo$UTMZone
+  photo.notes <- if_else(is.na(photo$PhotoNotes), "", photo$PhotoNotes)
+  
+  photo.section <- c(photo.section, knitr::knit_expand("photo-info.rmd"), collapse = '\n')
+}
+```
+
+`r paste(knitr::knit(text = photo.section), collapse = '\n')`
