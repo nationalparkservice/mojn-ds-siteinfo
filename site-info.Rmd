@@ -1,6 +1,7 @@
 ---
 output:
-  officedown::rdocx_document
+  word_document:
+    reference_docx: styles.docx
 params:
   site.code: DEVA_P_ANV0292
 ---
@@ -10,7 +11,6 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(pool)
 library(dbplyr)
-library(officedown)
 
 # Set up database connection
 db.params <- readr::read_csv("M:/MONITORING/DS_Water/Data/Database/ConnectFromR/ds-database-conn.csv") %>%
@@ -42,13 +42,12 @@ photo.info %<>%
   arrange(PhotoType)
 ```
 
+
 ---
 title: `r visit.info$SiteCode`
 author: `r visit.info$SiteName`
 date: Last visited `r visit.info$VisitDate` (WY `r visit.info$VisitGroup`)
 ---
-
-<!---BLOCK_MULTICOL_START--->
 
 #### Spring type
 `r visit.info$SpringType`
@@ -56,15 +55,11 @@ date: Last visited `r visit.info$VisitDate` (WY `r visit.info$VisitGroup`)
 #### Sample frame
 `r visit.info$SampleFrame`
 
-<!---CHUNK_COLUMNBREAK--->
-
 #### Visit notes
 `r visit.info$VisitNotes`
 
 #### Sensor notes
 `r visit.info$SensorNotes`
-
-<!---BLOCK_MULTICOL_STOP{widths: [2,2], space: 0.2, sep: true}--->
 
 ## Photos
 ```{r include=FALSE}
@@ -84,3 +79,4 @@ for(row in 1:nrow(photo.info)) {
 ```
 
 `r paste(knitr::knit(text = photo.section), collapse = '\n')`
+
