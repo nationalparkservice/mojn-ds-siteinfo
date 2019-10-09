@@ -2,6 +2,6 @@
 
 ### {{photo.label}}
 
-UTM Zone {{utm.zone}} X: {{utm.x}} Y: {{utm.y}}
+**X:** {{utm.x}} **Y:** {{utm.y}} (UTM Zone {{utm.zone}})
 
 ![{{photo.notes}}]({{photo.path}}){width=450px}
