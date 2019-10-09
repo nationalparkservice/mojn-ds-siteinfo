@@ -49,19 +49,15 @@ author: `r visit.info$SiteName`
 date: Last visited `r visit.info$VisitDate` (WY `r visit.info$VisitGroup`)
 ---
 
-#### Spring type
-`r visit.info$SpringType`
+**Spring type: ** `r visit.info$SpringType`
 
-#### Sample frame
-`r visit.info$SampleFrame`
+**Sample frame: ** `r visit.info$SampleFrame`
 
-#### Visit notes
-`r visit.info$VisitNotes`
+**Visit notes: ** `r visit.info$VisitNotes`
 
-#### Sensor notes
-`r visit.info$SensorNotes`
+**Sensor notes: ** `r visit.info$SensorNotes`
 
-## Photos
+# Photos
 ```{r include=FALSE}
 photo.section <- NULL
 for(row in 1:nrow(photo.info)) {
@@ -72,7 +68,7 @@ for(row in 1:nrow(photo.info)) {
   utm.x <- photo$UtmX_m
   utm.y <- photo$UtmY_m
   utm.zone <- photo$UTMZone
-  photo.notes <- if_else(is.na(photo$PhotoNotes), "", photo$PhotoNotes)
+  photo.notes <- if_else(is.na(photo$PhotoNotes), "", paste0(": ", photo$PhotoNotes))
   
   photo.section <- c(photo.section, knitr::knit_expand("photo-info.rmd"), collapse = '\n')
 }
