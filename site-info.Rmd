@@ -18,20 +18,20 @@ db.params <- readr::read_csv("M:/MONITORING/DS_Water/Data/Database/ConnectFromR/
 db.params$drv <- odbc::odbc()
 conn <- do.call(dbPool, db.params)
 
-# Get plot info from database
-plot.info <- tbl(conn, in_schema("export", "SiteInfoSheet")) %>%
+# Get spring info from database
+spring.info <- tbl(conn, in_schema("export", "SiteInfoSheet")) %>%
   collect() %>%
   filter(SiteCode == params$site.code)
 
 poolClose(conn)
 
 # Split plot info into visit-level info...
-visit.info <- plot.info %>%
+visit.info <- spring.info %>%
   select(-PhotoType, -PhotoLabel, -RenamedFilePath, -UtmX_m, -UtmY_m, -UTMZone, -PhotoNotes) %>%
   unique()
 
 # ...and photo-level info
-photo.info <- plot.info %>%
+photo.info <- spring.info %>%
   select(PhotoType, PhotoLabel, RenamedFilePath, UtmX_m, UtmY_m, UTMZone, PhotoNotes) %>%
   mutate(RenamedFilePath = sub("\\\\\\\\INPLAKE52V\\\\ORG", "M:", RenamedFilePath))
 
