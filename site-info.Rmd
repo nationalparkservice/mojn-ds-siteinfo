@@ -2,8 +2,10 @@
 output:
   word_document:
     reference_docx: styles.docx
+  html_document:
+    df_print: paged
 params:
-  site.code: DEVA_P_ANV0292
+  site.code: LAKE_P_COR0023
 ---
 
 ```{r setup, include=FALSE}
@@ -20,6 +22,14 @@ conn <- do.call(dbPool, db.params)
 
 # Get spring info from database
 spring.info <- tbl(conn, in_schema("export", "SiteInfoSheet")) %>%
+  collect() %>%
+  filter(SiteCode == params$site.code)
+
+sensorRet.info <- tbl(conn, in_schema("analysis", "SensorRetrievalAttempts")) %>%
+  collect() %>%
+  filter(SiteCode == params$site.code)
+
+sensorDep.info <- tbl(conn, in_schema("analysis", "SensorsAllDeployments")) %>%
   collect() %>%
   filter(SiteCode == params$site.code)
 
@@ -46,7 +56,7 @@ photo.info %<>%
 ---
 title: `r visit.info$SiteCode`
 author: `r visit.info$SiteName`
-date: Last visited `r visit.info$VisitDate` (WY `r visit.info$VisitGroup`)
+date: Last visited `r visit.info$VisitDate` (WY `r visit.info$FieldSeason`)
 ---
 
 **Spring type: ** `r visit.info$SpringType`
@@ -56,6 +66,19 @@ date: Last visited `r visit.info$VisitDate` (WY `r visit.info$VisitGroup`)
 **Visit notes: ** `r visit.info$VisitNotes`
 
 **Sensor notes: ** `r visit.info$SensorNotes`
+
+# Deployments
+```{r include=FALSE}
+dep.section <- NULL
+for(row in 1:nrow(sensorDep.info)) {
+  dep <- sensorDep.info[row,]
+  dep.serialnumber <- dep$SerialNumber
+  dep.visitdate <- dep$VisitDate
+  dep.notes <- if_else(is.na(dep$Notes), "", paste0(": ", dep$Notes))
+  
+  dep.section <- c(dep.section, knitr::knit_expand("deployment-info.rmd"), collapse = '\n')
+}
+```
 
 # Photos
 ```{r include=FALSE}

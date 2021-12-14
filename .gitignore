@@ -6,3 +6,5 @@
 *.html
 *.pdf
 *.docx
+*.csv
+/Data
