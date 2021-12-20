@@ -3,11 +3,11 @@ library(pool)
 library(dbplyr)
 
 # Setup
-park <- "MOJA"
-frame <- "Annual"  #"Annual" or "3Yr"
-wateryear <- "22"
-#dest.folder <- paste0("M:/MONITORING/DS_Water/Implementation/SitePackets/PreviousVisitInfo/", park) 
-dest.folder <- paste0("Data/SiteInfoSheets/",wateryear,"-",park)
+park <- "CAMO"
+frame <- "3Yr"  #"Annual" or "3Yr"
+wateryear <- "2022"
+dest.folder <- paste0("M:/MONITORING/DS_Water/Implementation/SitePackets/PreviousVisitInfo/", wateryear, "/", park) 
+#dest.folder <- paste0("Data/SiteInfoSheets/",wateryear,"-",park)
 
 # Set up database connection
 db.params <- readr::read_csv("M:/MONITORING/DS_Water/Data/Database/ConnectFromR/ds-database-conn.csv") %>%
