@@ -1,7 +1,7 @@
 ---
 output:
   word_document:
-    reference_docx: styles.docx
+    #reference_docx: styles.docx
   html_document:
     df_print: paged
 params:
@@ -79,6 +79,8 @@ for(row in 1:nrow(sensorDep.info)) {
   dep.section <- c(dep.section, knitr::knit_expand("deployment-info.rmd"), collapse = '\n')
 }
 ```
+
+`r paste(knitr::knit(text = dep.section), collapse = '\n')`
 
 # Photos
 ```{r include=FALSE}
