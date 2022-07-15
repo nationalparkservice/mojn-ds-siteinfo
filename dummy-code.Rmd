@@ -10,46 +10,42 @@ params:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(desertsprings)
 library(tidyverse)
 library(pool)
 library(dbplyr)
+library(devtools)
 
 # Set up database connection
-db.params <- readr::read_csv("M:/MONITORING/DS_Water/Data/Database/ConnectFromR/ds-database-conn.csv") %>%
-      as.list()
-db.params$drv <- odbc::odbc()
-conn <- do.call(dbPool, db.params)
+install_github("nationalparkservice/mojn-ds-rpackage", ref = "master")
+conn <- OpenDatabaseConnection()
+db <- GetRawData(conn)
 
-# Get spring info from database
-spring.info <- tbl(conn, in_schema("export", "SiteInfoSheet")) %>%
-  collect() %>%
+#Get Spring info from database (new version)
+spring.info <- db$Visit %>%
   filter(SiteCode == params$site.code)
 
-sensorRet.info <- tbl(conn, in_schema("analysis", "SensorRetrievalAttempts")) %>%
-  collect() %>%
+sensorRet.info <- db$SensorRetrievalAttempts %>%
   filter(SiteCode == params$site.code)
 
-sensorDep.info <- tbl(conn, in_schema("analysis", "SensorsAllDeployments")) %>%
-  collect() %>%
+sensorDep.info <-db$SensorsCurrentlyDeployed %>%
   filter(SiteCode == params$site.code)
 
-poolClose(conn)
-
-# Split plot info into visit-level info...
-visit.info <- spring.info %>%
-  select(-PhotoType, -PhotoLabel, -RenamedFilePath, -UtmX_m, -UtmY_m, -UTMZone, -PhotoNotes) %>%
+# # Split plot info into visit-level info...
+ visit.info <- spring.info %>%
+#  select(-PhotoType, -PhotoLabel, -RenamedFilePath, -UtmX_m, -UtmY_m, -UTMZone, -PhotoNotes) %>%
   unique()
 
 # ...and photo-level info
-photo.info <- spring.info %>%
-  select(PhotoType, PhotoLabel, RenamedFilePath, UtmX_m, UtmY_m, UTMZone, PhotoNotes) %>%
-  mutate(RenamedFilePath = sub("\\\\\\\\INPLAKE52V\\\\ORG", "M:", RenamedFilePath))
+#photo.info <- spring.info %>%
+#  select(PhotoType, PhotoLabel, RenamedFilePath, UtmX_m, UtmY_m, UTMZone, PhotoNotes) %>%
+#  mutate(RenamedFilePath = sub("\\\\\\\\INPLAKE52V\\\\ORG", "M:", RenamedFilePath))
 
-photo.types <- c('SOURCE', 'UPSTR', 'DNSTR', 'SENSOR')
+#photo.types <- c('SOURCE', 'UPSTR', 'DNSTR', 'SENSOR')
 
-photo.info %<>%
-  mutate(PhotoType = factor(PhotoType, levels = photo.types)) %>%
-  arrange(PhotoType)
+#photo.info %<>%
+#  mutate(PhotoType = factor(PhotoType, levels = photo.types)) %>%
+#  arrange(PhotoType)
 ```
 
 
@@ -63,9 +59,9 @@ date: Last visited `r visit.info$VisitDate` (WY `r visit.info$FieldSeason`)
 
 **Sample frame: ** `r visit.info$SampleFrame`
 
-**Visit notes: ** `r visit.info$VisitNotes`
+**Visit notes: ** `r visit.info$Notes`
 
-**Sensor notes: ** `r visit.info$SensorNotes`
+**Sensor notes: ** `r sensorDep.info$Notes`
 
 # Deployments
 ```{r include=FALSE}
@@ -82,22 +78,21 @@ for(row in 1:nrow(sensorDep.info)) {
 
 `r paste(knitr::knit(text = dep.section), collapse = '\n')`
 
-# Photos
-```{r include=FALSE}
-photo.section <- NULL
-for(row in 1:nrow(photo.info)) {
-  photo <- photo.info[row,]
-  photo.path <- photo$RenamedFilePath
-  photo.type <- photo$PhotoType
-  photo.label <- photo$PhotoLabel
-  utm.x <- photo$UtmX_m
-  utm.y <- photo$UtmY_m
-  utm.zone <- photo$UTMZone
-  photo.notes <- if_else(is.na(photo$PhotoNotes), "", paste0(": ", photo$PhotoNotes))
-  
-  photo.section <- c(photo.section, knitr::knit_expand("photo-info.rmd"), collapse = '\n')
-}
-```
+<!-- # Photos -->
+<!-- ```{r include=FALSE} -->
+<!--  photo.section <- NULL -->
+<!--  for(row in 1:nrow(photo.info)) { -->
+<!--   photo <- photo.info[row,] -->
+<!--   photo.path <- photo$RenamedFilePath -->
+<!--   photo.type <- photo$PhotoType -->
+<!--   photo.label <- photo$PhotoLabel -->
+<!--   utm.x <- photo$UtmX_m   utm.y <- photo$UtmY_m -->
+<!--   utm.zone <- photo$UTMZone -->
+<!--   photo.notes <- if_else(is.na(photo$PhotoNotes), "", paste0(": ", photo$PhotoNotes)) -->
 
-`r paste(knitr::knit(text = photo.section), collapse = '\n')`
+<!--    photo.section <- c(photo.section, knitr::knit_expand("photo-info.rmd"), collapse = '\n') -->
+<!--  } -->
+<!-- ``` -->
+
+<!-- `r paste(knitr::knit(text = photo.section), collapse = '\n')` -->
 
