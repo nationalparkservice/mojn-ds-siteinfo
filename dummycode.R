@@ -12,8 +12,18 @@ dest.folder <- paste0("Data/SiteInfoSheets/",wateryear,"-",park)
 
 #Install DesertSprings package and set up database
 install_github("nationalparkservice/mojn-ds-rpackage", ref = "master")
-conn <- OpenDatabaseConnection()
+conn1 <- OpenDatabaseConnection()
 db <- GetRawData(conn)
+
+visit <- db$Visit
+
+spring.info1 <- db$Visit %>%
+  filter(SiteCode == params$site.code)
+
+visit.info1 <- spring.info1 %>%
+  #  select(-PhotoType, -PhotoLabel, -RenamedFilePath, -UtmX_m, -UtmY_m, -UTMZone, -PhotoNotes) %>%
+  unique()
+
 
 # Get spring info from database
 springs <- db$Visit %>%
