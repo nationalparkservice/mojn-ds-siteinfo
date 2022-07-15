@@ -1,0 +1,103 @@
+---
+output:
+  word_document:
+    #reference_docx: styles.docx
+  html_document:
+    df_print: paged
+params:
+  site.code: LAKE_P_SUG0011
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(pool)
+library(dbplyr)
+
+# Set up database connection
+db.params <- readr::read_csv("M:/MONITORING/DS_Water/Data/Database/ConnectFromR/ds-database-conn.csv") %>%
+      as.list()
+db.params$drv <- odbc::odbc()
+conn <- do.call(dbPool, db.params)
+
+# Get spring info from database
+spring.info <- tbl(conn, in_schema("export", "SiteInfoSheet")) %>%
+  collect() %>%
+  filter(SiteCode == params$site.code)
+
+sensorRet.info <- tbl(conn, in_schema("analysis", "SensorRetrievalAttempts")) %>%
+  collect() %>%
+  filter(SiteCode == params$site.code)
+
+sensorDep.info <- tbl(conn, in_schema("analysis", "SensorsAllDeployments")) %>%
+  collect() %>%
+  filter(SiteCode == params$site.code)
+
+poolClose(conn)
+
+# Split plot info into visit-level info...
+visit.info <- spring.info %>%
+  select(-PhotoType, -PhotoLabel, -RenamedFilePath, -UtmX_m, -UtmY_m, -UTMZone, -PhotoNotes) %>%
+  unique()
+
+# ...and photo-level info
+photo.info <- spring.info %>%
+  select(PhotoType, PhotoLabel, RenamedFilePath, UtmX_m, UtmY_m, UTMZone, PhotoNotes) %>%
+  mutate(RenamedFilePath = sub("\\\\\\\\INPLAKE52V\\\\ORG", "M:", RenamedFilePath))
+
+photo.types <- c('SOURCE', 'UPSTR', 'DNSTR', 'SENSOR')
+
+photo.info %<>%
+  mutate(PhotoType = factor(PhotoType, levels = photo.types)) %>%
+  arrange(PhotoType)
+```
+
+
+---
+title: `r visit.info$SiteCode`
+author: `r visit.info$SiteName`
+date: Last visited `r visit.info$VisitDate` (WY `r visit.info$FieldSeason`)
+---
+
+**Spring type: ** `r visit.info$SpringType`
+
+**Sample frame: ** `r visit.info$SampleFrame`
+
+**Visit notes: ** `r visit.info$VisitNotes`
+
+**Sensor notes: ** `r visit.info$SensorNotes`
+
+# Deployments
+```{r include=FALSE}
+dep.section <- NULL
+for(row in 1:nrow(sensorDep.info)) {
+  dep <- sensorDep.info[row,]
+  dep.serialnumber <- dep$SerialNumber
+  dep.visitdate <- dep$VisitDate
+  dep.notes <- if_else(is.na(dep$Notes), "", paste0(": ", dep$Notes))
+  
+  dep.section <- c(dep.section, knitr::knit_expand("deployment-info.rmd"), collapse = '\n')
+}
+```
+
+`r paste(knitr::knit(text = dep.section), collapse = '\n')`
+
+# Photos
+```{r include=FALSE}
+photo.section <- NULL
+for(row in 1:nrow(photo.info)) {
+  photo <- photo.info[row,]
+  photo.path <- photo$RenamedFilePath
+  photo.type <- photo$PhotoType
+  photo.label <- photo$PhotoLabel
+  utm.x <- photo$UtmX_m
+  utm.y <- photo$UtmY_m
+  utm.zone <- photo$UTMZone
+  photo.notes <- if_else(is.na(photo$PhotoNotes), "", paste0(": ", photo$PhotoNotes))
+  
+  photo.section <- c(photo.section, knitr::knit_expand("photo-info.rmd"), collapse = '\n')
+}
+```
+
+`r paste(knitr::knit(text = photo.section), collapse = '\n')`
+

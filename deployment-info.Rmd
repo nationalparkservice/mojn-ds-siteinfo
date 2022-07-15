@@ -1,1 +1,1 @@
-![**{{dep.notes}}]
+![**Serial Number: ** {{dep.serialnumber}} **Notes **  {{dep.notes}}]
