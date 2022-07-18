@@ -21,8 +21,8 @@ install_github("nationalparkservice/mojn-ds-rpackage", ref = "master")
 conn <- OpenDatabaseConnection()
 db <- GetRawData(conn)
 
-#Get Spring info from database (new version)
-spring.info <- db$Visit %>%
+#Get Spring info from database --- if add param for visit date, would apply second filter to these with VisitDate == params$visit.date or something similar
+spring.info <- db$Photo %>%
   filter(SiteCode == params$site.code)
 
 sensorRet.info <- db$SensorRetrievalAttempts %>%
@@ -31,21 +31,30 @@ sensorRet.info <- db$SensorRetrievalAttempts %>%
 sensorDep.info <-db$SensorsCurrentlyDeployed %>%
   filter(SiteCode == params$site.code)
 
-# # Split plot info into visit-level info...
+# Split plot info into visit-level info...
  visit.info <- spring.info %>%
-#  select(-PhotoType, -PhotoLabel, -RenamedFilePath, -UtmX_m, -UtmY_m, -UTMZone, -PhotoNotes) %>%
+  select(-PhotoType, -PhotoLabel, -RenamedFilePath, -UtmX_m, -UtmY_m, -UTMZone, -PhotoNotes) %>%
   unique()
 
-# ...and photo-level info
-#photo.info <- spring.info %>%
-#  select(PhotoType, PhotoLabel, RenamedFilePath, UtmX_m, UtmY_m, UTMZone, PhotoNotes) %>%
-#  mutate(RenamedFilePath = sub("\\\\\\\\INPLAKE52V\\\\ORG", "M:", RenamedFilePath))
+ # ...and photo-level info
+ ##probably won't need this chunk (lastvisit variable)
+lastvisit <- db$Visit %>%
+  group_by(SiteCode) %>%
+  filter(VisitDate == max(VisitDate))
+photo_last <- left_join(db$Photo, lastvisit, by.x = 'SiteCode', by.y = 'SiteCode')
 
-#photo.types <- c('SOURCE', 'UPSTR', 'DNSTR', 'SENSOR')
+photo_mostrecent <- db$Photo %>%
+  filter(VisitDate == max(VisitDate))
 
-#photo.info %<>%
-#  mutate(PhotoType = factor(PhotoType, levels = photo.types)) %>%
-#  arrange(PhotoType)
+photo.info <- photo_mostrecent %>%
+  select(PhotoType, PhotoLabel, RenamedFilePath, UtmX_m, UtmY_m, UTMZone, PhotoNotes) %>%
+  mutate(RenamedFilePath = sub("\\\\\\\\INPLAKE52V\\\\ORG", "M:", RenamedFilePath))
+
+photo.types <- c('SOURCE', 'UPSTR', 'DNSTR', 'SENSOR')
+
+photo.info %<>%
+  mutate(PhotoType = factor(PhotoType, levels = photo.types)) %>%
+  arrange(PhotoType)
 ```
 
 
