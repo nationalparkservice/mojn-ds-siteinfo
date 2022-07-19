@@ -6,6 +6,8 @@ output:
     df_print: paged
 params:
   site.code: LAKE_P_SUG0011
+  #To include all visit notes, set visit.date to ALL. To include only most recent visit, set to NA.
+  visit.date: NA
 ---
 
 ```{r setup, include=FALSE}
@@ -17,12 +19,12 @@ library(dbplyr)
 library(devtools)
 
 # Set up database connection
-install_github("nationalparkservice/mojn-ds-rpackage", ref = "master")
+#install_github("nationalparkservice/mojn-ds-rpackage", ref = "master")
 conn <- OpenDatabaseConnection()
 db <- GetRawData(conn)
 
 #Get Spring info from database --- if add param for visit date, would apply second filter to these with VisitDate == params$visit.date or something similar
-spring.info <- db$Photo %>%
+spring.info <- db$Visit %>%
   filter(SiteCode == params$site.code)
 
 sensorRet.info <- db$SensorRetrievalAttempts %>%
@@ -31,23 +33,25 @@ sensorRet.info <- db$SensorRetrievalAttempts %>%
 sensorDep.info <-db$SensorsCurrentlyDeployed %>%
   filter(SiteCode == params$site.code)
 
-# Split plot info into visit-level info...
- visit.info <- spring.info %>%
-  select(-PhotoType, -PhotoLabel, -RenamedFilePath, -UtmX_m, -UtmY_m, -UTMZone, -PhotoNotes) %>%
-  unique()
+# waterQual.info <- db$VisitActivity %>%
+#   filter(SiteCode == params$site.code)
+#   filter(Visitdate == max(VisitDate))
 
- # ...and photo-level info
- ##probably won't need this chunk (lastvisit variable)
-lastvisit <- db$Visit %>%
-  group_by(SiteCode) %>%
+channelChar.info <- db$DischargeFlowCondition %>%
+  filter(SiteCode == params$site.code) %>%
   filter(VisitDate == max(VisitDate))
-photo_last <- left_join(db$Photo, lastvisit, by.x = 'SiteCode', by.y = 'SiteCode')
 
+# Split plot info into most recent visit-level info...
+visit.info <- spring.info %>%
+  filter(VisitDate == max(VisitDate))
+
+# ...and photo-level info
+## Get photos for only most recent visit
 photo_mostrecent <- db$Photo %>%
-  filter(VisitDate == max(VisitDate))
+  filter(VisitDate == max(VisitDate), PhotoSOP == 'RPT')
 
 photo.info <- photo_mostrecent %>%
-  select(PhotoType, PhotoLabel, RenamedFilePath, UtmX_m, UtmY_m, UTMZone, PhotoNotes) %>%
+  select(PhotoType, RenamedFilePath, UtmX_m, UtmY_m, Notes) %>%
   mutate(RenamedFilePath = sub("\\\\\\\\INPLAKE52V\\\\ORG", "M:", RenamedFilePath))
 
 photo.types <- c('SOURCE', 'UPSTR', 'DNSTR', 'SENSOR')
@@ -72,8 +76,10 @@ date: Last visited `r visit.info$VisitDate` (WY `r visit.info$FieldSeason`)
 
 **Sensor notes: ** `r sensorDep.info$Notes`
 
-# Deployments
-```{r include=FALSE}
+**Discharge flow notes: ** `r channelChar.info$Notes`
+
+# Current Deployments
+```{r include = FALSE}
 dep.section <- NULL
 for(row in 1:nrow(sensorDep.info)) {
   dep <- sensorDep.info[row,]
@@ -87,21 +93,54 @@ for(row in 1:nrow(sensorDep.info)) {
 
 `r paste(knitr::knit(text = dep.section), collapse = '\n')`
 
-<!-- # Photos -->
-<!-- ```{r include=FALSE} -->
-<!--  photo.section <- NULL -->
-<!--  for(row in 1:nrow(photo.info)) { -->
-<!--   photo <- photo.info[row,] -->
-<!--   photo.path <- photo$RenamedFilePath -->
-<!--   photo.type <- photo$PhotoType -->
-<!--   photo.label <- photo$PhotoLabel -->
-<!--   utm.x <- photo$UtmX_m   utm.y <- photo$UtmY_m -->
-<!--   utm.zone <- photo$UTMZone -->
-<!--   photo.notes <- if_else(is.na(photo$PhotoNotes), "", paste0(": ", photo$PhotoNotes)) -->
+# Discharge Flow
+```{r include = FALSE}
+dischargeFlow.section <- NULL
+  for(row in 1:nrow(channelChar.info)) {
+  dis <- channelChar.info[row,]
+  dis.visitdate <- dis$VisitDate
+  dis.notes <- if_else(is.na(dis$Notes), "", paste0(": ", dis$Notes))
 
-<!--    photo.section <- c(photo.section, knitr::knit_expand("photo-info.rmd"), collapse = '\n') -->
-<!--  } -->
-<!-- ``` -->
+  dischargeFlow.section <- c(dischargeFlow.section, knitr::knit_expand("dischargeFlow-info.rmd"), collapse = '\n')
+}
 
-<!-- `r paste(knitr::knit(text = photo.section), collapse = '\n')` -->
+```
+
+`r paste(knitr::knit(text = dischargeFlow.section), collapse = '\n')`
+
+
+# Other Visits
+```{r include = FALSE}
+visitsother.section <- NULL
+if(params$visit.date == 'ALL'){
+    for(row in 1:nrow(spring.info)){
+      visits <- spring.info[row,]
+      visits.date <- visits$VisitDate
+      visits.notes <- if_else(is.na(visits$Notes), "", paste0(": ", visits$Notes))
+      
+      visitsother.section <- c(visitsother.section, knitr::knit_expand("visitsother-info.rmd"), collapse = '\n')
+    }
+}else {
+  visitsother.section <- NA
+}
+```
+
+`r paste(knitr::knit(text = visitsother.section), collapse = '\n') `
+
+# Photos
+```{r include=FALSE}
+ photo.section <- NULL
+ for(row in 1:nrow(photo.info)) {
+  photo <- photo.info[row,]
+  photo.path <- photo$RenamedFilePath
+  photo.type <- photo$PhotoType
+  utm.x <- photo$UtmX_m   
+  utm.y <- photo$UtmY_m
+  photo.notes <- if_else(is.na(photo$Notes), "", paste0(": ", photo$Notes))
+
+   photo.section <- c(photo.section, knitr::knit_expand("photo-info.rmd"), collapse = '\n')
+ }
+```
+
+`r paste(knitr::knit(text = photo.section), collapse = '\n')`
 
