@@ -4,13 +4,13 @@ library(dplyr)
 library(devtools)
 
 # Setup
-park <- "CAMO"
+park <- "LAKE"
 frame <- "3Yr"  #"Annual" or "3Yr"
 wateryear <- "2022"
 #dest.folder <- paste0("M:/MONITORING/DS_Water/Implementation/SitePackets/PreviousVisitInfo/", wateryear, "/", park) 
 dest.folder <- paste0("Data/SiteInfoSheets/",wateryear,"-",park)
 
-#Install DesertSprings package and set up database
+#Install DesertSprings package and set up database connection
 #install_github("nationalparkservice/mojn-ds-rpackage", ref = "master")
 conn <- OpenDatabaseConnection()
 db <- GetRawData(conn)
