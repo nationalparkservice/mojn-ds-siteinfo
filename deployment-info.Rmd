@@ -1,1 +1,1 @@
-{{dep.serialnumber}} -- **Notes**  {{dep.notes}}
+**{{dep.serialnumber}}** {{dep.notes}}
