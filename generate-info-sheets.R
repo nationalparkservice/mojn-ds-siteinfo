@@ -1,35 +1,34 @@
+library(desertsprings)
 library(tidyverse)
 library(pool)
 library(dbplyr)
 library(devtools)
 
 # Setup
-park <- "CAMO"
-frame <- "3Yr"  #"Annual" or "3Yr"
+park <- "MOJA"
+frame <- "Annual"  #"Annual" or "3Yr"
 wateryear <- "2022"
-#dest.folder <- paste0("M:/MONITORING/DS_Water/Implementation/SitePackets/PreviousVisitInfo/", wateryear, "/", park) 
+visitdate <- "ALL" #To include all visit notes, set visit.date to "ALL". To include only notes for most recent visit, set to "NA".
+#dest.folder <- paste0("M:/MONITORING/DS_Water/Implementation/SitePackets/", park)
 dest.folder <- paste0("Data/SiteInfoSheets/",wateryear,"-",park)
 
-# Set up database connection
-db.params <- readr::read_csv("M:/MONITORING/DS_Water/Data/Database/ConnectFromR/ds-database-conn.csv") %>%
-  as.list()
-db.params$drv <- odbc::odbc()
-conn <- do.call(dbPool, db.params)
+
+#Install DesertSprings package and load data into environment
+#install_github("nationalparkservice/mojn-ds-rpackage", ref = "agol-import")
+LoadDesertSprings() 
+db <- GetRawData()
 
 # Get spring info from database
-springs <- tbl(conn, in_schema("export", "SourceMostRecent")) %>%
-  collect() %>%
-  select(Park, SiteCode, FieldSeason, SampleFrame) %>%
+springs <- db$Visit %>%
+  select(Park, SiteCode, SampleFrame) %>%
   unique() %>%
-  filter(Park == park,SampleFrame == frame) %>%
-  mutate(FileName = paste0(SiteCode, "_", FieldSeason, ".docx"))
-
-# Close database connection
-poolClose(conn)
+  filter(Park == park, SampleFrame == frame) %>%
+  mutate(FileName = paste0(SiteCode, ".docx"))
 
 # Generate info sheets
 for (i in 1:nrow(springs)) {
   spring <- springs[i, ]
   #This would be a good spot to add an option to overwrite existing files or not
-  rmarkdown::render("site-info.Rmd", output_file = spring$FileName, output_dir = dest.folder, params = list(site.code = spring$SiteCode))
+  rmarkdown::render("dummy-code.Rmd", output_file = spring$FileName, output_dir = dest.folder, params = list(site.code = spring$SiteCode, visit.date = visitdate))
 }
+

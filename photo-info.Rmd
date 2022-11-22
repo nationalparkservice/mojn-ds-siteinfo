@@ -1,1 +1,1 @@
-![**{{photo.type}}**  (X:{{utm.x}},  Y: {{utm.y}}){{photo.notes}}]({{photo.path}}){width=450px}
+![**{{photo.type}}**  {{photo.notes}}]({{photo.path}}){width=450px}

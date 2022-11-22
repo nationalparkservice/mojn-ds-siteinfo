@@ -1,0 +1,1 @@
+**{{allDep.serialnumber}}** --{{allDep.visitdate}} {{allDep.notes}}
