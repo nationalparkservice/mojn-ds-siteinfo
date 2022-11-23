@@ -29,6 +29,6 @@ springs <- db$Visit %>%
 for (i in 1:nrow(springs)) {
   spring <- springs[i, ]
   #This would be a good spot to add an option to overwrite existing files or not
-  rmarkdown::render("dummy-code.Rmd", output_file = spring$FileName, output_dir = dest.folder, params = list(site.code = spring$SiteCode, visit.date = visitdate))
+  rmarkdown::render("site-info.Rmd", output_file = spring$FileName, output_dir = dest.folder, params = list(site.code = spring$SiteCode, visit.date = visitdate))
 }
 
