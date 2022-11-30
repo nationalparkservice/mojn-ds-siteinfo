@@ -5,7 +5,7 @@ output:
   html_document:
     df_print: paged
 params:
-  site.code: LAKE_P_GNA0050
+  site.code: JOTR_P_BLA0045
   visit.date: ALL
 ---
 
@@ -18,7 +18,8 @@ library(dbplyr)
 library(devtools)
 library(lubridate)
 
-#Install DesertSprings package and load data into environment
+#Load data into environment
+## Uncomment LoadDesertSprings() if trying to knit within this document.
 LoadDesertSprings()
 db <- GetRawData()
 
