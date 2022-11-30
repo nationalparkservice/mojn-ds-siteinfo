@@ -5,51 +5,100 @@ output:
   html_document:
     df_print: paged
 params:
-  site.code: LAKE_P_COR0023
+  site.code: JOTR_P_BLA0045
+  visit.date: ALL
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(desertsprings)
 library(tidyverse)
 library(pool)
 library(dbplyr)
+library(devtools)
+library(lubridate)
 
-# Set up database connection
-db.params <- readr::read_csv("M:/MONITORING/DS_Water/Data/Database/ConnectFromR/ds-database-conn.csv") %>%
-      as.list()
-db.params$drv <- odbc::odbc()
-conn <- do.call(dbPool, db.params)
+#Load data into environment
+## Uncomment LoadDesertSprings() if trying to knit within this document.
+LoadDesertSprings()
+db <- GetRawData()
 
 # Get spring info from database
-spring.info <- tbl(conn, in_schema("export", "SiteInfoSheet")) %>%
-  collect() %>%
+spring.info <- db$Visit %>%
+  filter(SiteCode == params$site.code) %>% 
+  arrange(desc(VisitDate))
+
+sensorRet.info <- db$SensorRetrievalAttempts %>%
+  filter(SiteCode == params$site.code) %>% 
+  arrange(desc(RetrievalDate))
+
+sensorAllDep.info <- db$SensorsAllDeployments %>%
+  filter(SiteCode == params$site.code) %>% 
+  arrange(desc(VisitDate))
+
+sensorDep.info <- db$SensorsCurrentlyDeployed %>%
+  filter(SiteCode == params$site.code) %>% 
+  arrange(desc(VisitDate))
+
+waterQual.info <- db$VisitActivity %>%
+  filter(SiteCode == params$site.code) %>% 
+  arrange(desc(VisitDate))
+
+channelChar.info <- db$DischargeFlowCondition %>%
+  filter(SiteCode == params$site.code) %>% 
+  arrange(desc(VisitDate))
+
+site.info <- db$Site %>%
   filter(SiteCode == params$site.code)
 
-sensorRet.info <- tbl(conn, in_schema("analysis", "SensorRetrievalAttempts")) %>%
-  collect() %>%
+pH.info <- db$WaterQualitypH %>%
+  filter(SiteCode == params$site.code) 
+
+SpCond.info <- db$WaterQualitySpCond %>%
   filter(SiteCode == params$site.code)
 
-sensorDep.info <- tbl(conn, in_schema("analysis", "SensorsAllDeployments")) %>%
-  collect() %>%
-  filter(SiteCode == params$site.code)
-
-poolClose(conn)
-
-# Split plot info into visit-level info...
+# Split spring info into most recent visit-level info...
 visit.info <- spring.info %>%
-  select(-PhotoType, -PhotoLabel, -RenamedFilePath, -UtmX_m, -UtmY_m, -UTMZone, -PhotoNotes) %>%
-  unique()
+  filter(VisitDate == max(VisitDate))
+
+waterQualVisit.info <- db$VisitActivity %>%
+   filter(SiteCode == params$site.code) %>%
+   filter(VisitDate == max(VisitDate)) 
+
+channelCharVisit.info <- channelChar.info %>%
+   filter(VisitDate == max(VisitDate)) 
+
+pHVisit.info <- pH.info %>%
+  filter(VisitDate == max(VisitDate))
+
+SpCondVisit.info <- SpCond.info %>%
+  filter(VisitDate == max(VisitDate))
+
+if(nrow(sensorDep.info) != 0){ 
+sensorDepVisit.info <- sensorDep.info %>%
+   filter(VisitDate == max(VisitDate))
+}else{
+  sensorDepVisit.info <- sensorDep.info
+  sensorDepVisit.info[nrow(sensorDepVisit.info) + 1, ] <- NA
+  sensorDepVisit.info$Notes <- "None"
+}
 
 # ...and photo-level info
-photo.info <- spring.info %>%
-  select(PhotoType, PhotoLabel, RenamedFilePath, UtmX_m, UtmY_m, UTMZone, PhotoNotes) %>%
-  mutate(RenamedFilePath = sub("\\\\\\\\INPLAKE52V\\\\ORG", "M:", RenamedFilePath))
+photo_mostrecent <- db$Photo %>%
+  filter(SiteCode == params$site.code, PhotoSOP == 'RPT') %>%
+  filter(VisitDate == max(VisitDate))
+
+photo.info <- photo_mostrecent %>%
+  select(PhotoType, RenamedFilePath, Notes) %>%
+  mutate(RenamedFilePath = sub("\\\\\\\\INPLAKEMOJNDB\\\\ORG", "M:", RenamedFilePath))
 
 photo.types <- c('SOURCE', 'UPSTR', 'DNSTR', 'SENSOR')
 
 photo.info %<>%
   mutate(PhotoType = factor(PhotoType, levels = photo.types)) %>%
   arrange(PhotoType)
+
+show_section <- if_else(params$visit.date == 'ALL', TRUE, FALSE)
 ```
 
 
@@ -63,22 +112,131 @@ date: Last visited `r visit.info$VisitDate` (WY `r visit.info$FieldSeason`)
 
 **Sample frame: ** `r visit.info$SampleFrame`
 
-**Visit notes: ** `r visit.info$VisitNotes`
+**Site description: ** `r site.info$SiteDescription`
 
-**Sensor notes: ** `r visit.info$SensorNotes`
+**Ecological description: ** `r site.info$EcologicalDescription`
 
-# Deployments
+**Logistical description: ** `r site.info$LogisticalDescription`
+
+**Drive description: ** `r site.info$DriveDescription`
+
+**Hike description: ** `r site.info$HikeDescription`
+
+**Hike distance (m): ** `r site.info$HikeDistance_m`
+
+**Hike Time (min): ** `r site.info$HikeTime_min`
+
+**Most Recent pH: ** `r pHVisit.info$pH` **Max pH: ** `r max(pH.info$pH, na.rm = TRUE)` **Min pH: ** `r min(pH.info$pH, na.rm = TRUE)` 
+
+**Most Recent SpCond: ** `r format(SpCondVisit.info$SpecificConductance_microS_per_cm, scientific=FALSE)` **Max SpCond: ** `r format(max(SpCond.info$SpecificConductance_microS_per_cm, na.rm = TRUE), scientific = FALSE)` **Min SpCond: ** `r format(min(SpCond.info$SpecificConductance_microS_per_cm, na.rm = TRUE), scientific = FALSE)`
+
+# General Visit Notes
+```{r include = FALSE}
+visitsother.section  <- NULL
+for(row in 1:nrow(spring.info)){
+  visits <- spring.info[row,]
+  visits.date <- visits$VisitDate
+  #visits.notes <- if_else(is.na(visits$Notes), "", paste0(": ", visits$Notes))
+  visits.notes <- visits$Notes    
+  
+  visitsother.section <- c(visitsother.section, knitr::knit_expand("visitsother-info.rmd"), collapse = '\n')
+    }
+```
+
+`r if_else((show_section == TRUE), {paste(knitr::knit(text = visitsother.section), collapse = '\n')}, visit.info$Notes)`
+
+# Current Deployments
 ```{r include=FALSE}
 dep.section <- NULL
 for(row in 1:nrow(sensorDep.info)) {
   dep <- sensorDep.info[row,]
   dep.serialnumber <- dep$SerialNumber
   dep.visitdate <- dep$VisitDate
-  dep.notes <- if_else(is.na(dep$Notes), "", paste0(": ", dep$Notes))
+  #dep.notes <- if_else(is.na(dep$Notes), "", paste0(": ", dep$Notes))
+  dep.notes <- dep$Notes
   
   dep.section <- c(dep.section, knitr::knit_expand("deployment-info.rmd"), collapse = '\n')
 }
 ```
+
+`r if_else((show_section == TRUE), {paste(knitr::knit(text = dep.section), collapse = '\n')}, sensorDepVisit.info$Notes)`
+
+# All Deployments
+```{r include = FALSE}
+allDep.section <- NULL
+for(row in 1:nrow(sensorAllDep.info )) {
+  allDep <- sensorAllDep.info[row,]
+  allDep.serialnumber <- allDep$SerialNumber
+  allDep.visitdate <- allDep$VisitDate
+  allDep.notes <- allDep$Notes
+  
+  
+  allDep.section <- c(allDep.section, knitr::knit_expand("allDeployment-info.rmd"), collapse = '\n')
+}
+```
+`r paste(knitr::knit(text = allDep.section), collapse = '\n')`
+
+# Retrievals
+```{r include = FALSE}
+ret.section <- NULL
+for(row in 1:nrow(sensorRet.info)) {
+  ret <- sensorRet.info[row,]
+  ret.serialnumber <- ret$SerialNumber
+  ret.visitdate <- ret$RetrievalDate
+  ret.notes <- ret$Notes
+  
+  
+  ret.section <- c(ret.section, knitr::knit_expand("retrieval-info.rmd"), collapse = '\n')
+}
+```
+`r paste(knitr::knit(text = ret.section), collapse = '\n')`
+
+# Discharge Flow Condition
+```{r include = FALSE}
+dischargeFlow.section <- NULL
+  for(row in 1:nrow(channelChar.info)) {
+  dis <- channelChar.info[row,]
+  dis.visitdate <- dis$VisitDate
+  #dis.notes <- if_else(is.na(dis$Notes), "", paste0(": ", dis$Notes))
+  dis.notes <- dis$Notes
+  
+  dischargeFlow.section <- c(dischargeFlow.section, knitr::knit_expand("dischargeFlow-info.rmd"), collapse = '\n')
+}
+
+```
+
+`r if_else((show_section == TRUE),{paste(knitr::knit(text = dischargeFlow.section), collapse = '\n')}, channelCharVisit.info$Notes)`
+
+# Channel Characteristics
+```{r include = FALSE}
+channelChar.section <- NULL
+  for(row in 1:nrow(channelChar.info)) {
+  channel <- channelChar.info[row,]
+  channel.visitdate <- channel$VisitDate
+  #channel.notes <- if_else(is.na(channel$SpringbrookNotes), "", paste0(": ", channel$SpringbrookNotes))
+  channel.notes <- channel$SpringbrookNotes
+  
+  channelChar.section <- c(channelChar.section, knitr::knit_expand("channelChar-info.rmd"), collapse = '\n')
+}
+
+```
+
+`r if_else((show_section == TRUE),{paste(knitr::knit(text = channelChar.section), collapse = '\n')}, channelCharVisit.info$SpringbrookNotes)`
+
+# Water Quality
+``` {r include = FALSE}
+waterQual.section <- NULL
+for(row in 1:nrow(waterQual.info)){
+  water <-waterQual.info[row,]
+  water.visitdate <- water$VisitDate
+  #water.notes <- if_else(is.na(water$WaterQualityNotes), "", paste0(": ", water$WaterQualityNotes))
+  water.notes <- water$WaterQualityNotes
+  
+  waterQual.section <- c(waterQual.section, knitr::knit_expand("waterQual-info.rmd"), collapse = '\n')
+}
+```
+
+`r if_else((show_section == TRUE),{paste(knitr::knit(text = waterQual.section), collapse = '\n')}, waterQualVisit.info$WaterQualityNotes)`
 
 # Photos
 ```{r include=FALSE}
@@ -87,11 +245,7 @@ for(row in 1:nrow(photo.info)) {
   photo <- photo.info[row,]
   photo.path <- photo$RenamedFilePath
   photo.type <- photo$PhotoType
-  photo.label <- photo$PhotoLabel
-  utm.x <- photo$UtmX_m
-  utm.y <- photo$UtmY_m
-  utm.zone <- photo$UTMZone
-  photo.notes <- if_else(is.na(photo$PhotoNotes), "", paste0(": ", photo$PhotoNotes))
+  photo.notes <- if_else(is.na(photo$Notes), "", paste0(": ", photo$Notes))
   
   photo.section <- c(photo.section, knitr::knit_expand("photo-info.rmd"), collapse = '\n')
 }

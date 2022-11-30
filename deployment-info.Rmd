@@ -1,1 +1,1 @@
-![**{{dep.notes}}]
+**{{dep.serialnumber}}** --{{dep.visitdate}} {{dep.notes}}

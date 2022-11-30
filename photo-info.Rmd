@@ -1,1 +1,1 @@
-![**{{photo.label}}**  (X:{{utm.x}},  Y: {{utm.y}}, UTM Zone {{utm.zone}}){{photo.notes}}]({{photo.path}}){width=450px}
+![**{{photo.type}}**  {{photo.notes}}]({{photo.path}}){width=450px}

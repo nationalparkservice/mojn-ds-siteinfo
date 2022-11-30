@@ -1,0 +1,1 @@
+**{{ret.serialnumber}}** --{{ret.visitdate}} {{ret.notes}}
