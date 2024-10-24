@@ -5,9 +5,9 @@ library(dbplyr)
 library(devtools)
 
 # Setup
-park <- "JOTR"
-frame <- "3Yr"  #"Annual" or "3Yr"
-wateryear <- "2022"
+park <- "PARA"
+frame <- "Annual"  #"Annual" or "3Yr"
+wateryear <- "2025" #Used destination folder name
 visitdate <- "ALL" #To include all visit notes, set visit.date to "ALL". To include only notes for most recent visit, set to "NA".
 #dest.folder <- paste0("M:/MONITORING/DS_Water/Implementation/SitePackets/", park)
 dest.folder <- paste0("Data/SiteInfoSheets/",wateryear,"-",park)
