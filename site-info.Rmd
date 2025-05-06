@@ -20,8 +20,8 @@ library(lubridate)
 
 #Load data into environment
 ## Uncomment LoadDesertSprings() if trying to knit within this document.
-LoadDesertSprings()
-db <- GetRawData()
+#LoadDesertSprings()
+#db <- GetRawData()
 
 # Get spring info from database
 spring.info <- db$Visit %>%
